@@ -24,3 +24,7 @@ class RegisterSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
     code = serializers.CharField()
+
+class LoginSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    pin = serializers.CharField()
