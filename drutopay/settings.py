@@ -17,6 +17,7 @@ FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY')
 NID_HASH_SECRET = config('NID_HASH_SECRET')
 PHONE_HASH_SECRET = config('PHONE_HASH_SECRET')
 EMAIL_HASH_SECRET = config('EMAIL_HASH_SECRET')
+WALLET_NUMBER_SECRET = config('WALLET_NUMBER_SECRET')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

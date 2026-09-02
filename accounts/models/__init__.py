@@ -1,2 +1,3 @@
-from .user import User, UserManager, UserType, hash_nid, hash_phone, hash_email, generate_wallet_number
+from .user import User, UserManager, UserType, hash_nid, hash_phone, hash_email
 from .otp import OTP, hash_otp
+from accounts.identity import CustomerIdAllocation, allocate_wallet_number

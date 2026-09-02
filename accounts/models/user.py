@@ -1,11 +1,12 @@
 import hmac
 import hashlib
-import random
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django_cryptography.fields import encrypt
+
+from accounts.identity import allocate_wallet_number
 
 
 def hash_nid(nid: str) -> str:
@@ -29,13 +30,6 @@ def hash_email(email: str) -> str:
         hashlib.sha256
         ).hexdigest()
 
-def generate_wallet_number() -> str:
-    while True:
-        number = ''.join(random.choices('0123456789', k=10))
-        if not User.objects.filter(wallet_number=number).exists():
-            return number
-
-
 class UserManager(BaseUserManager):
 
     def create_user(self, password=None, **extra_fields):
@@ -47,7 +41,7 @@ class UserManager(BaseUserManager):
         user = self.model(
         phone_number_hash=hash_phone(raw_phone),
         phone_number_encrypted = raw_phone,
-        wallet_number = generate_wallet_number(),
+        wallet_number = allocate_wallet_number(),
          **extra_fields
          )
         user.set_password(password)
