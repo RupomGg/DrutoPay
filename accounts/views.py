@@ -46,12 +46,12 @@ class VerifyOTPView(APIView):
         code = serializer.validated_data['code']
 
         otp = OTP.objects.filter(
-            phone_number=phone_number,
+            phone_hash=hash_phone(phone_number),
             purpose=OTP.Purpose.REGISTRATION,
             is_used=False,
         ).order_by('-created_at').first()
 
-        if not otp or not otp.check_code(code):
+        if not otp or not otp.check_code(phone_number, code):
             return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.get(phone_number_hash=hash_phone(phone_number))

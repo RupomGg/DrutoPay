@@ -1,0 +1,483 @@
+<title>Anonymous by Design</title>
+<meta name="description" content="A hand-drawn six-slide carousel: how a payments wallet stores the phone number and mints an account ID that reveals nothing.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Quicksand:wght@400;500;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+  :root{
+    --paper:#ffffff;
+    --line:#e9e8ea;
+    --ink:#18171b;
+    --ink-soft:#5c5b63;
+    --red:#f4333d;
+    --red-tint:#fde3e4;
+    --grey-dot:#c7c7cf;
+    --marker:"Permanent Marker", "Comic Sans MS", cursive;
+    --body:"Quicksand", ui-sans-serif, system-ui, sans-serif;
+    --mono:"Courier Prime", ui-monospace, "Courier New", monospace;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:#eceaea;
+    color:var(--ink);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+  }
+  .hint{
+    max-width:1100px;
+    margin:30px auto 6px;
+    padding:14px 18px;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--ink-soft);
+    background:#fff;
+    border:2px solid var(--ink);
+  }
+  .hint b{color:var(--ink);}
+
+  .deck{
+    --s:.62;
+    display:flex; flex-direction:column; align-items:center; gap:44px;
+    padding:34px 12px 60px;
+  }
+  @media (max-width:2040px){ .deck{ --s:.62; } }
+  @media (max-width:1300px){ .deck{ --s:.46; } }
+  @media (max-width:940px){ .deck{ --s:.32; } }
+
+  .frame{
+    position:relative;
+    width:calc(1920px * var(--s));
+    height:calc(1080px * var(--s));
+    overflow:hidden;
+    box-shadow:0 4px 44px rgba(0,0,0,.16);
+  }
+  .slide{
+    position:absolute; top:0; left:0;
+    width:1920px;
+    height:1080px;
+    transform:scale(var(--s));
+    transform-origin:top left;
+    background:
+      repeating-linear-gradient(var(--paper) 0 46px, var(--line) 46px 48px);
+    overflow:hidden;
+  }
+  .pad{ position:absolute; inset:0; padding:70px 96px 64px; z-index:3; display:flex; flex-direction:column; }
+
+  /* ---- shared type ---- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:19px;
+    letter-spacing:.34em;
+    text-transform:uppercase;
+    color:var(--red);
+    margin:0 0 10px;
+  }
+  h1{ font-family:var(--marker); font-weight:400; margin:0; }
+  h2{
+    font-family:var(--marker); font-weight:400;
+    font-size:74px; line-height:1.02;
+    margin:0 0 30px;
+    transform:rotate(-1deg);
+    letter-spacing:.01em;
+  }
+  p{ margin:0; }
+  .lede{ font-size:27px; line-height:1.5; color:var(--ink-soft); max-width:30ch; }
+  .lede b{ color:var(--ink); font-weight:700; }
+
+  .foot{
+    margin-top:auto;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:15px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--ink-soft);
+    padding-top:16px;
+  }
+
+  /* ---- sketch frame boxes ---- */
+  .box{ position:relative; background:var(--paper); max-width:100%; }
+  .box > .fr{ position:absolute; inset:-6px; width:calc(100% + 12px); height:calc(100% + 12px); overflow:visible; pointer-events:none; }
+  .box > .fr rect{ fill:var(--paper); stroke:var(--red); stroke-width:2.5; filter:url(#sk); vector-effect:non-scaling-stroke; }
+  .box.ink > .fr rect{ stroke:var(--ink); }
+  .box.solid > .fr rect{ fill:var(--ink); }
+  .box .in{ position:relative; z-index:1; padding:20px 26px; }
+
+  .role{ font-family:var(--mono); font-size:15px; letter-spacing:.16em; text-transform:uppercase; color:var(--red); }
+  .box.ink .role{ color:var(--ink-soft); }
+  .ttl{ font-size:25px; font-weight:700; line-height:1.24; margin-top:4px; }
+  .box.solid .ttl, .box.solid .mono, .box.solid .sub{ color:var(--paper); }
+  .sub{ font-size:19px; line-height:1.42; color:var(--ink-soft); margin-top:6px; }
+  .mono{ font-family:var(--mono); }
+  .chip{
+    display:inline-block; font-family:var(--mono); font-size:19px;
+    background:var(--paper); border:2px solid var(--ink); padding:6px 12px;
+  }
+  .chip.k{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .chip.r{ background:var(--red-tint); border-color:var(--red); }
+
+  .tag{
+    display:inline-block; font-family:var(--mono); font-size:13.5px;
+    letter-spacing:.12em; text-transform:uppercase; padding:3px 9px;
+    border:2px solid currentColor;
+  }
+  .ok{ color:#1f7a4d; } .no{ color:var(--red); }
+
+  .yes-line{ font-size:18px; line-height:1.5; color:var(--ink); }
+  .yes-line b{ color:#1f7a4d; } .yes-line i{ font-style:normal; color:var(--red); font-weight:700; }
+
+  .kick{
+    font-family:var(--marker); font-size:30px; color:var(--ink);
+    transform:rotate(-.6deg); margin-top:8px;
+  }
+  .kick .u{ color:var(--red); }
+
+  /* decorations */
+  .doodle{ position:absolute; z-index:1; filter:url(#sk2); pointer-events:none; }
+  .tape{
+    position:absolute; z-index:2; height:44px; width:190px;
+    background:var(--red); opacity:.9; pointer-events:none;
+  }
+  .tape.grid{
+    background:
+      linear-gradient(var(--red) 0 0) padding-box,
+      repeating-linear-gradient(90deg,#fff 0 3px,transparent 3px 26px),
+      repeating-linear-gradient(0deg,#fff 0 3px,transparent 3px 22px);
+    background-blend-mode:normal;
+  }
+  .halftone{ position:absolute; z-index:1; opacity:.5; pointer-events:none; }
+
+  .flow-svg{ position:absolute; z-index:2; overflow:visible; pointer-events:none; }
+  .flow-svg path{ fill:none; stroke:var(--ink); stroke-width:2.5; filter:url(#sk); }
+
+  table{ width:100%; border-collapse:collapse; font-size:20px; margin-top:4px; }
+  th,td{ text-align:left; padding:15px 14px; border-bottom:2px solid var(--line); vertical-align:top; }
+  thead th{ font-family:var(--mono); font-size:14px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); border-bottom:3px solid var(--ink); }
+  td.f{ font-weight:700; white-space:nowrap; }
+  td .mono{ font-size:17px; }
+  .redact{ color:var(--ink-soft); letter-spacing:.12em; }
+
+  @media print{
+    @page{ size:1920px 1080px; margin:0; }
+    body{ background:#fff; }
+    .hint{ display:none; }
+    .deck{ display:block; padding:0; gap:0; }
+    .frame{ width:1920px; height:1080px; overflow:visible; box-shadow:none; break-after:page; page-break-after:always; }
+    .slide{ transform:none; position:static; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="sk"><feTurbulence type="fractalNoise" baseFrequency="0.017" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5"/></filter>
+  <filter id="sk2"><feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.5"/></filter>
+</defs></svg>
+
+<div class="hint">6 slides at 1920&times;1080. <b>Print &rarr; Save as PDF</b> and post it on LinkedIn as a document, or screenshot each slide. This bar is not printed.</div>
+
+<div class="deck">
+
+<!-- ============ SLIDE 1 ============ -->
+<div class="frame"><section class="slide">
+  <svg class="halftone" style="top:40px;left:120px;width:230px" viewBox="0 0 100 100"><g fill="#8b8b93"><circle cx="8" cy="8" r="3"/><circle cx="24" cy="8" r="3"/><circle cx="40" cy="8" r="3"/><circle cx="56" cy="8" r="2.4"/><circle cx="72" cy="8" r="1.8"/><circle cx="8" cy="24" r="3"/><circle cx="24" cy="24" r="3"/><circle cx="40" cy="24" r="2.4"/><circle cx="56" cy="24" r="1.8"/><circle cx="8" cy="40" r="3"/><circle cx="24" cy="40" r="2.4"/><circle cx="40" cy="40" r="1.8"/><circle cx="8" cy="56" r="2.4"/><circle cx="24" cy="56" r="1.8"/><circle cx="8" cy="72" r="1.8"/></g></svg>
+  <span class="tape" style="top:150px;right:210px;transform:rotate(19deg)"></span>
+  <svg class="doodle" style="bottom:70px;left:110px;width:280px;height:120px" viewBox="0 0 280 120"><path d="M6 70c20-46 44 24 66-2s34-52 56-24 30 58 52 30 34-46 52-24" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+  <svg class="doodle" style="top:120px;right:120px;width:150px;height:150px" viewBox="0 0 150 150"><path d="M75 20c30 0 45 25 40 50s-40 40-62 28-24-48-4-60 46-6 52 16-4 40-26 40" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+  <svg class="doodle" style="bottom:140px;right:150px;width:120px;height:120px" viewBox="0 0 120 120"><rect x="26" y="40" width="68" height="54" rx="8" fill="none" stroke="#18171b" stroke-width="4"/><path d="M40 40v-10a20 20 0 0 1 40 0v10" fill="none" stroke="#18171b" stroke-width="4"/><circle cx="60" cy="64" r="6" fill="#18171b"/><path d="M60 70v12" stroke="#18171b" stroke-width="4" stroke-linecap="round"/></svg>
+
+  <div class="pad" style="justify-content:center">
+    <div class="box" style="align-self:flex-start;max-width:1180px">
+      <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+      <div class="in" style="padding:40px 60px">
+        <p class="eyebrow">Build notes &middot; wallet identity</p>
+        <h1 style="font-size:120px;line-height:.98;transform:rotate(-1.5deg)">Anonymous<br>by Design</h1>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:44px;max-width:40ch">
+      How a payments wallet stores your <b>phone number</b>, and mints an
+      <b>account ID</b> that gives away nothing &mdash; not your number,
+      not your name, not even the order you signed up in.
+    </p>
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>01 / 06</span></div>
+  </div>
+</section></div>
+
+<!-- ============ SLIDE 2 ============ -->
+<div class="frame"><section class="slide">
+  <span class="tape grid" style="top:90px;right:150px;transform:rotate(-15deg)"></span>
+  <svg class="doodle" style="bottom:90px;right:110px;width:230px;height:120px" viewBox="0 0 230 120"><path d="M8 60c14-40 30 26 44 0s26-44 40-18 24 46 38 22 26-36 40-18" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+
+  <div class="pad">
+    <p class="eyebrow">The trap</p>
+    <h2>Two ways to get this wrong</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;margin-top:14px">
+      <div class="box">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:26px 30px">
+          <span class="role no">Attempt 1</span>
+          <div class="ttl">Use the phone number as the account ID</div>
+          <p class="sub" style="margin-top:14px">
+            <span class="no tag" style="margin-right:8px">PII everywhere</span>
+            The number then lands in every log line, every table join, every
+            support screen, every analytics export. One leak exposes real people.
+          </p>
+        </div>
+      </div>
+
+      <div class="box">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:26px 30px">
+          <span class="role no">Attempt 2</span>
+          <div class="ttl">Random digits, check the DB, retry on clash</div>
+          <p class="sub" style="margin-top:14px">
+            <span class="no tag" style="margin-right:8px">Guessable</span>
+            <span class="mono">random()</span> is predictable &mdash; watch a few IDs, guess the next.<br><br>
+            <span class="no tag" style="margin-right:8px">Race condition</span>
+            Two signups pass the &ldquo;does it exist?&rdquo; check at the same instant, then both insert.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="box r" style="margin-top:52px">
+      <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+      <div class="in" style="padding:22px 30px">
+        <p class="kick" style="line-height:1.5">The fix &rarr; split it into <span class="u">two separate jobs</span>:
+        make it <span class="u">unique</span>, and separately, <span class="u">hide the sequence</span>.</p>
+      </div>
+    </div>
+
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>02 / 06</span></div>
+  </div>
+</section></div>
+
+<!-- ============ SLIDE 3 ============ -->
+<div class="frame"><section class="slide">
+  <svg class="doodle" style="top:70px;right:120px;width:170px;height:140px" viewBox="0 0 170 140"><path d="M20 70c0-40 40-50 70-34s34 62 6 74-70-6-70-40 34-46 58-30" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+
+  <div class="pad">
+    <p class="eyebrow">Step 1 &middot; storing PII</p>
+    <h2>The phone number, two ways</h2>
+
+    <!-- diagram -->
+    <div style="position:relative;height:566px;margin-top:6px">
+      <svg class="flow-svg" style="left:0;top:0;width:1728px;height:566px" viewBox="0 0 1728 566">
+        <path d="M864 92 C864 150 440 138 440 190 M427 172l13 22 13-22"/>
+        <path d="M864 92 C864 150 1288 138 1288 190 M1275 172l13 22 13-22"/>
+        <path d="M440 320 v46 M427 348l13 22 13-22"/>
+        <path d="M1288 320 v46 M1275 348l13 22 13-22"/>
+      </svg>
+
+      <!-- source -->
+      <div class="box ink" style="position:absolute;left:50%;top:6px;transform:translateX(-50%);width:520px;text-align:center">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:18px 24px">
+          <span class="role">Input</span>
+          <div class="ttl mono" style="font-size:23px">raw phone &nbsp; 01XXXXXXXXX</div>
+        </div>
+      </div>
+
+      <!-- left path -->
+      <div class="box" style="position:absolute;left:120px;top:196px;width:640px">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:16px 22px">
+          <span class="role" style="color:#1f7a4d">Path A &middot; to find you</span>
+          <div class="ttl mono" style="font-size:20px">HMAC-SHA256( secret&nbsp;pepper , phone )</div>
+        </div>
+      </div>
+      <div class="box" style="position:absolute;left:120px;top:376px;width:640px">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:16px 22px">
+          <div class="ttl mono" style="font-size:19px">phone_hash&nbsp;column&nbsp; = 9f3a1c&hellip;c1</div>
+          <p class="yes-line" style="margin-top:10px">
+            <b>&#10003;</b> same input &rarr; same output &mdash; you can look users up &amp; block duplicates<br>
+            <b>&#10003;</b> one-way &mdash; a stolen DB is <i>not</i> a list of phone numbers<br>
+            <i>&#10007;</i> you can never read the number back from it
+          </p>
+        </div>
+      </div>
+
+      <!-- right path -->
+      <div class="box" style="position:absolute;right:120px;top:196px;width:640px">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:16px 22px">
+          <span class="role" style="color:var(--ink-soft)">Path B &middot; to reach you</span>
+          <div class="ttl mono" style="font-size:20px">AES-GCM &middot; a fresh random IV per row</div>
+        </div>
+      </div>
+      <div class="box" style="position:absolute;right:120px;top:376px;width:640px">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="padding:16px 22px">
+          <div class="ttl mono" style="font-size:19px">phone_enc&nbsp;column&nbsp; = &#9617;&#9617;&#9617;&#9617;&#9617;&#9617;</div>
+          <p class="yes-line" style="margin-top:10px">
+            <b>&#10003;</b> decrypt with the key only when needed &mdash; OTP, verified support view<br>
+            <i>&#10007;</i> different ciphertext every time &mdash; nothing can search on it<br>
+            <i>&#10007;</i> useless to a thief without the key
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="kick" style="align-self:center">Keep <span class="u">both</span>. One column to find you, one to reach you.</p>
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>03 / 06</span></div>
+  </div>
+</section></div>
+
+<!-- ============ SLIDE 4 ============ -->
+<div class="frame"><section class="slide">
+  <span class="tape" style="top:100px;right:140px;transform:rotate(16deg)"></span>
+
+  <div class="pad">
+    <p class="eyebrow">Step 2 &middot; the wallet number</p>
+    <h2>Count first, then scramble</h2>
+
+    <!-- top row -->
+    <div style="display:flex;align-items:stretch;gap:26px;margin-top:6px">
+      <div class="box" style="flex:1">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in"><span class="role">1 &middot; database counter</span>
+          <div class="ttl">Auto-increment column</div>
+          <div class="sub"><span class="chip">1</span> <span class="chip">2</span> <span class="chip">3</span> &hellip;<br>atomic &middot; unique &middot; no lookup, no race</div>
+        </div>
+      </div>
+      <svg width="70" height="150" viewBox="0 0 70 150" class="flow-svg" style="position:relative"><path d="M4 75h48 M44 66l16 9-16 9"/></svg>
+      <div class="box" style="flex:.8">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in"><span class="role">2 &middot; offset</span>
+          <div class="ttl mono" style="font-size:21px">n + 1,000,000,000</div>
+          <div class="sub">so early IDs don&rsquo;t sit at the edge of the range</div>
+        </div>
+      </div>
+      <svg width="70" height="150" viewBox="0 0 70 150" class="flow-svg" style="position:relative"><path d="M4 75h48 M44 66l16 9-16 9"/></svg>
+      <div class="box r" style="flex:.7">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in"><span class="role">3 &middot; feed to</span><div class="ttl">Feistel permutation &darr;</div></div>
+      </div>
+    </div>
+
+    <!-- feistel panel -->
+    <div class="box ink" style="margin-top:26px">
+      <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+      <div class="in" style="padding:22px 30px">
+        <span class="role">Feistel permutation &middot; 4 rounds &middot; keyed</span>
+        <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:40px;margin-top:12px;align-items:center">
+          <div style="font-family:var(--mono);font-size:20px;line-height:2">
+            split n &rarr; <span class="chip">L</span> <span class="chip">R</span> &nbsp;(17 bits each)<br>
+            each round: &nbsp; L, R &nbsp;&larr;&nbsp; R , &nbsp; L &nbsp;XOR&nbsp; F(R)<br>
+            F(R) = HMAC-SHA256( key , round &#8214; R )<br>
+            after round 4: &nbsp; join <span class="chip">L</span><span class="chip">R</span> &rarr; n&prime;
+          </div>
+          <div>
+            <span class="tag ok" style="border-color:#3ad07e;color:#8affc0">bijection &mdash; 1 input &harr; 1 output</span>
+            <p class="sub" style="color:#d9d9de;margin-top:12px">
+              Reversible with the key. No two inputs share an output &mdash;
+              so the wallet number is unique <b style="color:#fff">by construction</b>,
+              never checked against the table.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- bottom row -->
+    <div style="display:flex;align-items:center;gap:26px;margin-top:24px">
+      <div class="box" style="flex:.9">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in"><span class="role">4 &middot; cycle-walk</span>
+          <div class="sub" style="margin-top:2px">n&prime; still bigger than 10 digits? run Feistel again. ~1.7 passes on average.</div>
+        </div>
+      </div>
+      <svg width="70" height="90" viewBox="0 0 70 90" class="flow-svg" style="position:relative"><path d="M4 45h48 M44 36l16 9-16 9"/></svg>
+      <div class="box solid" style="flex:1.2">
+        <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+        <div class="in" style="text-align:center">
+          <span class="role" style="color:#b9b9c0">wallet_number</span>
+          <div class="ttl mono" style="font-size:22px">1&rarr;0675163119&nbsp;&nbsp; 2&rarr;0949555767&nbsp;&nbsp; 3&rarr;8942541949</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>04 / 06</span></div>
+  </div>
+</section></div>
+
+<!-- ============ SLIDE 5 ============ -->
+<div class="frame"><section class="slide">
+  <svg class="doodle" style="bottom:80px;left:100px;width:260px;height:120px" viewBox="0 0 260 120"><path d="M8 60c16-44 34 28 50 2s28-46 44-20 26 48 42 22 28-38 44-18" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+
+  <div class="pad">
+    <p class="eyebrow">Why it holds</p>
+    <h2>A bijection can&rsquo;t collide</h2>
+
+    <div style="display:grid;grid-template-columns:640px 1fr;gap:76px;flex:1;align-items:center">
+      <!-- mapping diagram -->
+      <div style="position:relative;height:380px">
+        <svg class="flow-svg" style="left:0;top:0;width:640px;height:380px" viewBox="0 0 640 380">
+          <path d="M214 64 H430 M416 55l16 9-16 9"/>
+          <path d="M214 190 H430 M416 181l16 9-16 9"/>
+          <path d="M214 316 H430 M416 307l16 9-16 9"/>
+        </svg>
+        <span class="chip" style="position:absolute;left:0;top:44px;font-size:23px">counter 1</span>
+        <span class="chip" style="position:absolute;left:0;top:170px;font-size:23px">counter 2</span>
+        <span class="chip" style="position:absolute;left:0;top:296px;font-size:23px">counter 3</span>
+        <span class="chip k" style="position:absolute;right:0;top:46px;font-size:21px">0675163119</span>
+        <span class="chip k" style="position:absolute;right:0;top:172px;font-size:21px">0949555767</span>
+        <span class="chip k" style="position:absolute;right:0;top:298px;font-size:21px">8942541949</span>
+        <p class="mono" style="position:absolute;left:0;bottom:-2px;font-size:16px;color:var(--ink-soft)">one arrow in, one arrow out &mdash; always</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <div class="box"><svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+          <div class="in"><p class="yes-line" style="font-size:21px">
+            <b>&#10003;</b> Every counter maps to one number, and every number to one counter.<br><br>
+            <b>&#10003;</b> So two users <b>physically cannot</b> land on the same wallet number &mdash; with <i>zero</i> database checks.<br><br>
+            <b>&#10003;</b> Consecutive in, scrambled out &mdash; the ID hides both signup order and total user count.
+          </p></div>
+        </div>
+        <div class="box r"><svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+          <div class="in"><span class="role no">Compare</span>
+            <div class="sub" style="margin-top:2px"><b style="color:var(--ink)">random + check</b> has a race: two callers pass the check, then both insert the same value.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>05 / 06</span></div>
+  </div>
+</section></div>
+
+<!-- ============ SLIDE 6 ============ -->
+<div class="frame"><section class="slide">
+  <span class="tape grid" style="top:96px;right:150px;transform:rotate(-14deg)"></span>
+  <svg class="doodle" style="bottom:120px;right:120px;width:150px;height:150px" viewBox="0 0 150 150"><path d="M75 22c28 0 44 24 40 48s-38 40-60 28-24-46-4-58 44-6 50 16-4 38-24 40" fill="none" stroke="#f4333d" stroke-width="6" stroke-linecap="round"/></svg>
+
+  <div class="pad">
+    <p class="eyebrow">The result</p>
+    <h2>What&rsquo;s in the users table</h2>
+
+    <div class="box" style="margin-top:4px">
+      <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+      <div class="in" style="padding:14px 30px 24px">
+        <table>
+          <thead><tr><th>Field</th><th>Stored as</th><th>Example</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td class="f">phone <span class="mono">(lookup)</span></td><td>HMAC-SHA256 + pepper</td><td><span class="mono">9f3a&hellip;c1</span></td><td>match user, uniqueness</td></tr>
+            <tr><td class="f">phone <span class="mono">(recovery)</span></td><td>AES-GCM, random IV</td><td><span class="mono redact">enc:&#9617;&#9617;&#9617;&#9617;</span></td><td>send OTP, verified view</td></tr>
+            <tr><td class="f">national ID</td><td>HMAC + AES</td><td><span class="mono">4b7e&hellip;</span> / <span class="mono redact">&#9617;&#9617;</span></td><td>KYC match + retrieval</td></tr>
+            <tr><td class="f">wallet_number</td><td>Feistel( counter )</td><td><span class="mono">0675163119</span></td><td>internal joins, logs, admin</td></tr>
+            <tr><td class="f">PIN</td><td>PBKDF2-SHA256</td><td><span class="mono">pbkdf2_sha256$&hellip;</span></td><td>authentication</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="box r" style="margin-top:38px">
+      <svg class="fr" viewBox="0 0 100 100" preserveAspectRatio="none"><rect x="1" y="1" width="98" height="98"/></svg>
+      <div class="in" style="padding:22px 30px">
+        <p class="kick" style="margin:0"><span class="u">No column holds the raw phone number.</span></p>
+        <p class="sub" style="margin-top:8px;font-size:20px;color:var(--ink)">Support staff, admin panels and internal services all work off <span class="mono">wallet_number</span>. Only one narrow KYC view can reveal the real number &mdash; and that access is logged.</p>
+      </div>
+    </div>
+
+    <div class="foot"><span>DrutoPay &middot; build notes</span><span>06 / 06</span></div>
+  </div>
+</section></div>
+
+</div>

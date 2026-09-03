@@ -6,7 +6,13 @@ from .models import User, OTP
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ['wallet_number', 'phone_number_encrypted', 'user_type', 'is_phone_verified', 'is_kyc_verified', 'is_staff']
+
+    @admin.display(description='phone')
+    def phone_masked(self,obj):
+        p = obj.phone_number_encrypted or ""
+        return f"{p[:3]}****{p[-2:]}" if len(p) >= 5 else "****"
+
+    list_display = ['wallet_number', 'phone_masked', 'user_type', 'is_phone_verified', 'is_kyc_verified', 'is_staff']
     ordering = ('wallet_number',)
     readonly_fields = ('wallet_number', 'phone_number_hash', 'national_id_hash')
 
@@ -28,8 +34,8 @@ admin.site.register(User, CustomUserAdmin)
 
 @admin.register(OTP)
 class OTPAdmin(admin.ModelAdmin):
-    list_display = ('phone_number', 'purpose', 'is_used', 'attempts', 'created_at', 'expires_at')
+    list_display = ('purpose', 'is_used', 'attempts', 'created_at', 'expires_at')
     list_filter = ('purpose', 'is_used')
-    search_fields = ('phone_number',)
-    readonly_fields = ('code_hash', 'created_at')
+    search_fields = ('phone_hash',)
+    readonly_fields = ('phone_hash', 'code_hash', 'created_at')
     ordering = ('-created_at',)
