@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import LoginSerializer
 
 from .serializers import RegisterSerializer, VerifyOTPSerializer
-from .models import OTP, User, hash_phone
+from .models import OTP, User, hash_phone, OTPRateLimited
 
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes = 30)
@@ -27,7 +27,10 @@ class RegisterView(APIView):
         raw_phone = serializer.validated_data['phone_number']
         user = serializer.save()
 
-        otp, code = OTP.create_for(raw_phone, purpose=OTP.Purpose.REGISTRATION)
+        try:
+            otp, code = OTP.create_for(raw_phone, purpose=OTP.Purpose.REGISTRATION)
+        except OTPRateLimited as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         print(f"[DEV] OTP for {raw_phone}: {code}")
 
         return Response(
@@ -80,7 +83,9 @@ class LoginView(APIView):
         if user.is_locked:
             if user.locked_until and timezone.now() < user.locked_until:
                 return Response({"error": "Account temporarily locked. Try again later"}, status = status.HTTP_423_LOCKED)
+            # lockout has expired — clear it
             user.is_locked = False
+            user.locked_until = None
             user.failed_pin_attempts = 0
 
 
@@ -99,7 +104,7 @@ class LoginView(APIView):
             return Response({"error": "Invalid phone numer or PIN"}, status = status.HTTP_401_UNAUTHORIZED)
 
         user.failed_pin_attempts = 0
-        user.save(update_fields=['failed_pin_attempts'])
+        user.save(update_fields=['failed_pin_attempts', 'is_locked', 'locked_until'])
 
         refresh = RefreshToken.for_user(user)
         return Response({

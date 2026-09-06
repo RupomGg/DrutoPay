@@ -3,11 +3,21 @@ import hashlib
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 
 from .user import hash_phone
+
+
+# Rate limit: at most OTP_MAX_PER_WINDOW codes per phone+purpose per window.
+OTP_MAX_PER_WINDOW = 5
+OTP_WINDOW_SECONDS = 3600
+
+
+class OTPRateLimited(Exception):
+    """Raised when a phone number has requested too many codes in the window."""
 
 
 def hash_otp(phone_number: str, code: str) -> str:
@@ -47,9 +57,26 @@ class OTP(models.Model):
     def generate_code() -> str:
         return f"{secrets.randbelow(1_000_000):06d}"
 
+    @staticmethod
+    def _rate_check(phone_hash: str, purpose: str) -> None:
+        """Fixed-window counter in the cache; the TTL is set once per window so a
+        slow drip of requests can't keep extending it."""
+        key = f"otp-req:{purpose}:{phone_hash}"
+        if cache.add(key, 1, OTP_WINDOW_SECONDS):
+            count = 1
+        else:
+            try:
+                count = cache.incr(key)
+            except ValueError:  # expired between add() and incr()
+                cache.add(key, 1, OTP_WINDOW_SECONDS)
+                count = 1
+        if count > OTP_MAX_PER_WINDOW:
+            raise OTPRateLimited("Too many OTP requests. Try again later.")
+
     @classmethod
     def create_for(cls, phone_number: str, purpose: str = Purpose.REGISTRATION, valid_minutes: int = 5):
         phone_hash = hash_phone(phone_number)
+        cls._rate_check(phone_hash, purpose)
         # a fresh code invalidates any earlier unconsumed one for this phone + purpose
         cls.objects.filter(phone_hash=phone_hash, purpose=purpose, is_used=False).delete()
         code = cls.generate_code()

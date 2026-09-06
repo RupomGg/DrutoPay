@@ -131,6 +131,15 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Used by the OTP request rate limiter. LocMemCache is per-process — fine for
+# dev and a single worker; switch to Redis/Memcached before running multiple
+# workers so the counter is shared.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=7),
