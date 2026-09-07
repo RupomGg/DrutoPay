@@ -34,7 +34,7 @@ class Wallet(models.Model):
         default=WalletType.PRIMARY
     )
 
-    account_number = models.CharField(
+    wallet_number = models.CharField(
         max_length=20, 
         unique=True, 
         editable=False
