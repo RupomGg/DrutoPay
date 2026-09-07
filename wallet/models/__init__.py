@@ -1,3 +1,4 @@
+from wallet.reference import TxnCounter, allocate_reference
 from .wallet_tier import WalletTier
 from .wallet import Wallet
 from .transaction import Transaction

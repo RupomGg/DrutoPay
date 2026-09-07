@@ -2,6 +2,8 @@ import uuid
 
 from django.db import models
 
+from wallet.reference import allocate_reference
+
 
 class Transaction(models.Model):
     class Type(models.TextChoices):
@@ -15,6 +17,13 @@ class Transaction(models.Model):
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
+        editable=False,
+    )
+
+    # Human-facing reference (TX + 10 opaque digits). Internal FKs still use id.
+    reference = models.CharField(
+        max_length=16,
+        unique=True,
         editable=False,
     )
 
@@ -38,5 +47,10 @@ class Transaction(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = allocate_reference()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.type} {self.id} [{self.status}]"
+        return f"{self.reference} {self.type} [{self.status}]"
