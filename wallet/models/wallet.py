@@ -144,4 +144,4 @@ class Wallet(models.Model):
         return self.balance - self.reserved + self.overdraft_limit
 
     def __str__(self):
-        return f"{self.account_number} [{self.wallet_type}] {self.balance} {self.currency}"
+        return f"{self.wallet_number} [{self.wallet_type}] {self.balance} {self.currency}"

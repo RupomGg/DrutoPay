@@ -20,8 +20,15 @@ def create_primary_wallet(sender, instance, created, **kwargs):
     if not created:
         return
 
-    user_type = getattr(instance, 'user_type', 'customer')
-    tier_code = _DEFAULT_TIER_BY_USER_TYPE.get(user_type, 'customer_lite')
+    user_type = getattr(
+        instance,
+        'user_type',
+        'customer'
+    )
+    tier_code = _DEFAULT_TIER_BY_USER_TYPE.get(
+        user_type, 
+        'customer_lite'
+    )
     tier = (
         WalletTier.objects.filter(code=tier_code).first()
         or WalletTier.objects.filter(code='customer_lite').first()
@@ -32,7 +39,7 @@ def create_primary_wallet(sender, instance, created, **kwargs):
         customer=instance,
         wallet_type=Wallet.WalletType.PRIMARY,
         defaults={
-            'account_number': instance.wallet_number,
+            'wallet_number': instance.wallet_number,
             'tier': tier,
             'status': Wallet.Status.ACTIVE,
             'activated_at': now,
