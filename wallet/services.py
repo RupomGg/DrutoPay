@@ -36,7 +36,7 @@ def send_money(*, sender_wallet, recipient, amount, idempotency_key):
         return existing
     
     if amount <= 0:
-        raise TransferError("Amount must be positive")
+        raise TransactionError("Amount must be positive")
 
     try:
         recipient_wallet = Wallet.objects.get(
@@ -45,11 +45,11 @@ def send_money(*, sender_wallet, recipient, amount, idempotency_key):
         )
     
     except Wallet.DoesNotExist:
-        raise TransferError("Recipient wallet not found")
+        raise TransactionError("Recipient wallet not found")
     
 
     if sender_wallet.pk == recipient_wallet.pk:
-        raise TransferError("Cannot send money to your own wallet")
+        raise TransactionError("Cannot send money to your own wallet")
 
     ids = sorted([sender_wallet.pk, recipient_wallet.pk])
 
