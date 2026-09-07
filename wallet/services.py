@@ -10,13 +10,13 @@ from .models import Wallet, Transaction, LedgerEntry
 class TransactionError(Exception):
     pass
 
-class WalletNotActive(TransferError):
+class WalletNotActive(TransactionError):
     pass
 
-class InsufficientBalance(TransferError):
+class InsufficientBalance(TransactionError):
     pass
 
-class LimitExceeded(TransferError):
+class LimitExceeded(TransactionError):
     pass
 
 
@@ -25,8 +25,8 @@ def _sum(wallet, direction, since):
         direction = direction,
         created_at__gte = since
     ).aggregate(
-        s=Sum('ammount')
-    )['s'] or Decimal['0']
+        s=Sum('amount')
+    )['s'] or Decimal('0')
 
 def send_money(*, sender_wallet, recipient, amount, idempotency_key):
     existing = Transaction.objects.filter(
@@ -58,7 +58,7 @@ def send_money(*, sender_wallet, recipient, amount, idempotency_key):
 
         with transaction.atomic():
             locked = {
-                w.pk: W
+                w.pk: w
                 for w in Wallet.objects.select_for_update()
                 .select_related('tier')
                 .filter(pk__in=ids)
@@ -69,11 +69,11 @@ def send_money(*, sender_wallet, recipient, amount, idempotency_key):
 
             if sender.status != Wallet.Status.ACTIVE:
                 raise WalletNotActive("Sender wallet is not active")
-            if receiver.status != Wallet.Status.Active:
+            if receiver.status != Wallet.Status.ACTIVE:
                 raise WalletNotActive("Recipient wallet  is not active")
             
             if sender.available_balance < amount:
-                raise InsufficientFunds("Insufficient balance")
+                raise InsufficientBalance("Insufficient balance")
                 
             
             now = timezone.now()
