@@ -1,6 +1,8 @@
+import threading
 from decimal import Decimal
 
-from django.test import TestCase
+from django.db import connection
+from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APITestCase
 
 from accounts.models import User
@@ -223,3 +225,43 @@ class WalletAPITests(APITestCase):
         self.assertNotIn("id", row)
         self.assertTrue(row["reference"].startswith("TX"))
         self.assertEqual(row["direction"], LedgerEntry.Direction.DEBIT)
+
+
+class TransferConcurrencyTests(TransactionTestCase):
+    """Needs real committed transactions across threads, so TransactionTestCase
+    (not TestCase) and a real locking DB (Postgres). On SQLite these pass by
+    luck because writes serialize globally."""
+
+    def test_no_double_spend(self):
+        _, a = make_user("01710000001", balance="300.00")
+        _, b = make_user("01710000002")
+
+        results = []
+
+        def go(key):
+            try:
+                send_money(
+                    sender_wallet=a,
+                    recipient=b.wallet_number,
+                    amount=Decimal("200.00"),
+                    idempotency_key=key,
+                )
+                results.append("ok")
+            except InsufficientBalance:
+                results.append("rejected")
+            finally:
+                connection.close()
+
+        t1 = threading.Thread(target=go, args=("c1",))
+        t2 = threading.Thread(target=go, args=("c2",))
+        t1.start(); t2.start()
+        t1.join(); t2.join()
+
+        a.refresh_from_db()
+        b.refresh_from_db()
+
+        self.assertEqual(sorted(results), ["ok", "rejected"])   # exactly one wins
+        self.assertEqual(a.balance, Decimal("100.00"))          # never oversold
+        self.assertEqual(b.balance, Decimal("200.00"))
+        self.assertEqual(Transaction.objects.filter(status=Transaction.Status.COMPLETED).count(), 1)
+        self.assertEqual(LedgerEntry.objects.count(), 2)
