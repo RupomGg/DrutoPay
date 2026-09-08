@@ -50,8 +50,8 @@ class WalletSerializer(serializers.ModelSerializer):
 
 
 class LedgerEntrySerializer(serializers.ModelSerializer):
-    transaction_id = serializers.UUIDField(
-        source='transaction.id', 
+    reference = serializers.CharField(
+        source='transaction.reference',
         read_only=True
     )
     transaction_type = serializers.CharField(
@@ -62,8 +62,7 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = LedgerEntry
         fields = [
-            'id',
-            'transaction_id',
+            'reference',
             'transaction_type',
             'direction',
             'amount',
@@ -107,9 +106,9 @@ class TransactionResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = [
-            'id', 
-            'type', 
-            'status', 
-            'created_at', 
+            'reference',
+            'type',
+            'status',
+            'created_at',
             'new_balance'
         ]
