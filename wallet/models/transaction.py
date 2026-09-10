@@ -8,6 +8,8 @@ from wallet.reference import allocate_reference
 class Transaction(models.Model):
     class Type(models.TextChoices):
         P2P_TRANSFER = 'p2p_transfer', 'P2P Transfer'
+        CASH_IN = 'cash_in', 'Cash In'
+        CASH_OUT = 'cash_out', 'Cash Out'
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
